@@ -1,6 +1,5 @@
 package io.github.fabiomaciel.cotacaoservice.domain.service.impl
 
-import io.github.fabiomaciel.cotacaoservice.common.executeAsync
 import io.github.fabiomaciel.cotacaoservice.domain.event.CotacaoEventHandler
 import io.github.fabiomaciel.cotacaoservice.domain.model.Cotacao
 import io.github.fabiomaciel.cotacaoservice.domain.service.CotacaoService
@@ -9,12 +8,11 @@ import io.github.fabiomaciel.cotacaoservice.infra.httpclient.serviceb.ServiceBCl
 import io.github.fabiomaciel.cotacaoservice.infra.httpclient.servicec.ServiceCClient
 import io.github.fabiomaciel.cotacaoservice.infra.httpclient.servicec.model.GetCotacaoCRequest
 import io.github.fabiomaciel.cotacaoservice.web.controller.GetCotacaoCCallbackResquest
-import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Component
 
-@Primary
+@Deprecated("Use CotacaoServiceFutureImpl")
 @Component
-class CotacaoServiceFutureImpl(
+class CotacaoServiceImpl(
     val serviceAClient: ServiceAClient,
     val serviceBClient: ServiceBClient,
     val serviceCClient: ServiceCClient,
@@ -22,28 +20,18 @@ class CotacaoServiceFutureImpl(
 ) : CotacaoService {
 
     override fun buscarCotacao(moeda: String): Cotacao {
-        val firstFuture = executeAsync {
-            serviceAClient.getCotacao("USD").toCotacao()
-        }
+        val first = serviceAClient.getCotacao("USD").toCotacao()
+        val second = serviceBClient.getCotacao("USD").toCotacao()
 
-        val secondFuture = executeAsync {
-            serviceBClient.getCotacao("USD").toCotacao()
-        }
+        val responseC = serviceCClient.getCotacao(GetCotacaoCRequest("USD"))
+        val third = eventHandler.once(responseC.cid)?.toCotacao()
 
-        val thirdFuture = executeAsync {
-            val responseC = serviceCClient.getCotacao(GetCotacaoCRequest("USD"))
-            eventHandler.once(responseC.cid)?.toCotacao()
-        }
-
-        val first = firstFuture.get()!!
-        val second = secondFuture.get()!!
-        val third = thirdFuture.get()
-
-        println("requests: ${listOf(first, second, third)}")
+        println("first: $first")
+        println("second: $second")
+        println("third: $third")
 
         return first.orLesser(second).orLesser(third)
     }
-
 
     override fun callbackCotacao(callbackRequestBody: GetCotacaoCCallbackResquest) {
         eventHandler.emit(callbackRequestBody.cid, callbackRequestBody)

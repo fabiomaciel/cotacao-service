@@ -1,6 +1,5 @@
 package io.github.fabiomaciel.cotacaoservice.web.controller
 
-import io.github.fabiomaciel.cotacaoservice.domain.model.Cotacao
 import io.github.fabiomaciel.cotacaoservice.domain.service.CotacaoService
 import org.springframework.web.bind.annotation.*
 
@@ -11,9 +10,9 @@ class CotacaoController(
 ) {
 
     @GetMapping()
-    fun hello(@RequestParam moeda: String): Cotacao {
-        return cotacaoService.buscarCotacao(moeda)
-    }
+    fun hello(@RequestParam moeda: String) =
+        cotacaoService.buscarCotacao(moeda)
+
 
     @PostMapping("/callback")
     fun callback(@RequestBody body: GetCotacaoCCallbackResquest) {
